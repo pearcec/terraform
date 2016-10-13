@@ -438,6 +438,7 @@ func resourceArmVirtualMachineCreate(d *schema.ResourceData, meta interface{}) e
 	name := d.Get("name").(string)
 	location := d.Get("location").(string)
 	resGroup := d.Get("resource_group_name").(string)
+	licenseType := d.Get("license_type").(string)
 	tags := d.Get("tags").(map[string]interface{})
 	expandedTags := expandTags(tags)
 
@@ -473,6 +474,7 @@ func resourceArmVirtualMachineCreate(d *schema.ResourceData, meta interface{}) e
 			VMSize: compute.VirtualMachineSizeTypes(vmSize),
 		},
 		StorageProfile: &storageProfile,
+                LicenseType: &licenseType, 
 	}
 
 	if _, ok := d.GetOk("boot_diagnostics"); ok {
@@ -560,6 +562,10 @@ func resourceArmVirtualMachineRead(d *schema.ResourceData, meta interface{}) err
 	if resp.Properties.AvailabilitySet != nil {
 		d.Set("availability_set_id", strings.ToLower(*resp.Properties.AvailabilitySet.ID))
 	}
+
+	if resp.Properties.LicenseType != nil {
+		d.Set("license_type", resp.Properties.LicenseType)
+        }
 
 	d.Set("vm_size", resp.Properties.HardwareProfile.VMSize)
 

@@ -207,6 +207,7 @@ The following arguments are supported:
 * `location` - (Required) Specifies the supported Azure location where the resource exists. Changing this forces a new resource to be created.
 * `plan` - (Optional) A plan block as documented below.
 * `availability_set_id` - (Optional) The Id of the Availability Set in which to create the virtual machine
+* `license_type` - (Optional) Specifies that the image or disk that is being used was licensed on-premises. This element is only used for images that contain the Windows Server operating system.  Possible values are: Windows_Client Windows_Server If this element is included in a request for an update, the value must match the intitial value. This value cannot be updated.  For more information, see Azure Hybrid Use Benefit for Windows Server 
 * `boot_diagnostics` - (Optional) A boot diagnostics profile block as referenced below.
 * `vm_size` - (Required) Specifies the [size of the virtual machine](https://azure.microsoft.com/en-us/documentation/articles/virtual-machines-size-specs/).
 * `storage_image_reference` - (Optional) A Storage Image Reference block as documented below.
