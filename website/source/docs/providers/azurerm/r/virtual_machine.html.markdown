@@ -66,8 +66,12 @@ resource "azurerm_virtual_machine" "test" {
     name = "acctvm"
     location = "West US"
     resource_group_name = "${azurerm_resource_group.test.name}"
-    network_interface_ids = ["${azurerm_network_interface.test.id}"]
     vm_size = "Standard_A0"
+
+    network_profile {
+      network_interface_ids = "${azurerm_network_interface.test.id}"
+      primary = true
+    }
 
     storage_image_reference {
         publisher = "Canonical"
@@ -155,8 +159,12 @@ resource "azurerm_virtual_machine" "test" {
   name                  = "acctvm"
   location              = "West US"
   resource_group_name   = "${azurerm_resource_group.test.name}"
-  network_interface_ids = ["${azurerm_network_interface.test.id}"]
   vm_size               = "Standard_A0"
+
+  network_profile {
+    network_interface_ids = "${azurerm_network_interface.test.id}"
+    primary = true
+  }
 
   storage_image_reference {
     publisher = "Canonical"
@@ -219,7 +227,7 @@ The following arguments are supported:
 * `os_profile_windows_config` - (Required, when a windows machine) A Windows config block as documented below.
 * `os_profile_linux_config` - (Required, when a linux machine) A Linux config block as documented below.
 * `os_profile_secrets` - (Optional) A collection of Secret blocks as documented below.
-* `network_interface_ids` - (Required) Specifies the list of resource IDs for the network interfaces associated with the virtual machine.
+* `network_profile` - (Required) A Network config block as documented below.
 * `tags` - (Optional) A mapping of tags to assign to the resource.
 
 For more information on the different example configurations, please check out the [azure documentation](https://msdn.microsoft.com/en-us/library/mt163591.aspx#Anchor_2)
@@ -309,6 +317,12 @@ For more information on the different example configurations, please check out t
 
 * `certificate_url` - (Required) It is the Base64 encoding of a JSON Object that which is encoded in UTF-8 of which the contents need to be `data`, `dataType` and `password`.
 * `certificate_store` - (Required, on windows machines) Specifies the certificate store on the Virtual Machine where the certificate should be added to.
+
+`network_profile` supports the following:
+
+* `network_interface_id` - (Required) Specifies the identifier of the network interface associated with the virtual machine.
+* `primary` - (Required) Indicates whether network interfaces created from the network interface configuration will be the primary NIC of the VM.
+
 
 ## Attributes Reference
 

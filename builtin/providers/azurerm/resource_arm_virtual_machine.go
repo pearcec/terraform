@@ -423,14 +423,23 @@ func resourceArmVirtualMachine() *schema.Resource {
 					},
 				},
 			},
-
-			"network_interface_ids": {
+			"network_profile": {
 				Type:     schema.TypeSet,
 				Required: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
+				ForceNew: true,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"network_interface_id": &schema.Schema{
+							Type:     schema.TypeString,
+							Required: true,
+						},
+						"primary": &schema.Schema{
+							Type:     schema.TypeBool,
+							Required: true,
+						},
+					},
 				},
-				Set: schema.HashString,
+				Set: resourceArmVirtualMachineNetworkProfileHash,
 			},
 
 			"tags": tagsSchema(),
@@ -644,7 +653,7 @@ func resourceArmVirtualMachineRead(d *schema.ResourceData, meta interface{}) err
 	}
 
 	if resp.VirtualMachineProperties.NetworkProfile != nil {
-		if err := d.Set("network_interface_ids", flattenAzureRmVirtualMachineNetworkInterfaces(resp.VirtualMachineProperties.NetworkProfile)); err != nil {
+		if err := d.Set("network_profile", flattenAzureRmVirtualMachineNetworkProfile(resp.VirtualMachineProperties.NetworkProfile)); err != nil {
 			return fmt.Errorf("[DEBUG] Error setting Virtual Machine Storage Network Interfaces: %#v", err)
 		}
 	}
@@ -794,6 +803,15 @@ func resourceArmVirtualMachineStorageOsProfileWindowsConfigHash(v interface{}) i
 	return hashcode.String(buf.String())
 }
 
+func resourceArmVirtualMachineNetworkProfileHash(v interface{}) int {
+	var buf bytes.Buffer
+	m := v.(map[string]interface{})
+	buf.WriteString(fmt.Sprintf("%t-", m["network_interface_id"].(string)))
+	buf.WriteString(fmt.Sprintf("%t-", m["primary"].(bool)))
+
+	return hashcode.String(buf.String())
+}
+
 func flattenAzureRmVirtualMachinePlan(plan *compute.Plan) []interface{} {
 	result := make(map[string]interface{})
 	result["name"] = *plan.Name
@@ -827,10 +845,14 @@ func flattenAzureRmVirtualMachineDiagnosticsProfile(profile *compute.BootDiagnos
 	return []interface{}{result}
 }
 
-func flattenAzureRmVirtualMachineNetworkInterfaces(profile *compute.NetworkProfile) []string {
-	result := make([]string, 0, len(*profile.NetworkInterfaces))
-	for _, nic := range *profile.NetworkInterfaces {
-		result = append(result, *nic.ID)
+func flattenAzureRmVirtualMachineNetworkProfile(profile *compute.NetworkProfile) []map[string]interface{} {
+	result := make([]map[string]interface{}, 0, len(*profile.NetworkInterfaces))
+	for _, netConfig := range *profile.NetworkInterfaces {
+		c := map[string]interface{}{
+			"network_interface_id": *netConfig.ID,
+			"primary": *netConfig.NetworkInterfaceReferenceProperties.Primary,
+                }
+		result = append(result, c)
 	}
 	return result
 }
@@ -1258,20 +1280,29 @@ func expandAzureRmVirtualMachineImageReference(d *schema.ResourceData) (*compute
 }
 
 func expandAzureRmVirtualMachineNetworkProfile(d *schema.ResourceData) compute.NetworkProfile {
-	nicIds := d.Get("network_interface_ids").(*schema.Set).List()
-	network_interfaces := make([]compute.NetworkInterfaceReference, 0, len(nicIds))
+	networkProfileConfigs := d.Get("network_profile").(*schema.Set).List()
+	networkProfileConfig := make([]compute.NetworkInterfaceReference, 0, len(networkProfileConfigs))
 
 	network_profile := compute.NetworkProfile{}
 
-	for _, nic := range nicIds {
-		id := nic.(string)
+	for _, npProfileConfig := range networkProfileConfigs {
+                config := npProfileConfig.(map[string]interface{})
+
+		id := config["network_interface_id"].(string)
+
+                primary :=  config["primary"].(bool)
+        	network_interface_properties := compute.NetworkInterfaceReferenceProperties{
+			Primary: &primary,
+		}
+
 		network_interface := compute.NetworkInterfaceReference{
 			ID: &id,
+                        NetworkInterfaceReferenceProperties: &network_interface_properties,
 		}
-		network_interfaces = append(network_interfaces, network_interface)
+		networkProfileConfig = append(networkProfileConfig, network_interface)
 	}
 
-	network_profile.NetworkInterfaces = &network_interfaces
+	network_profile.NetworkInterfaces = &networkProfileConfig
 
 	return network_profile
 }
